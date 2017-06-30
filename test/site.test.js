@@ -1,4 +1,3 @@
-const assert = require('assert');
 const Url = require('url');
 const expect = require('expect.js');
 const nock = require('nock');
@@ -150,8 +149,67 @@ describe('Site', function() {
                     done();
                 });
             });
-        });// </context>
 
+            it("should fail with BadResponseError if the server is down", function (done) {
+                let nockRequest = nock('https://example.com')
+                    .post('/test/applications/oauth/interface/token.php')
+                    .reply(503, "offline");
 
+                site.processAuthorizationResponse({
+                    code: 'TestCode'
+                }, redirectURI, function (err, tokens, api) {
+                    expect(err).to.be.a(errors.BadResponseError);
+
+                    done();
+                });
+            });
+
+            it("should fail with BadResponseError if the server doesn't return an access token", function (done) {
+                let nockRequest = nock('https://example.com')
+                    .post('/test/applications/oauth/interface/token.php')
+                    .reply(200, {
+                        refresh_token: "TestRefreshToken"
+                    });
+
+                site.processAuthorizationResponse({
+                    code: 'TestCode'
+                }, redirectURI, function (err, tokens, api) {
+                    expect(err).to.be.a(errors.BadResponseError);
+
+                    done();
+                });
+            });
+        });
+    });
+
+    describe("#requestToken", function () {
+        it("should work with a refresh token", function(done) {
+            let nockRequest = nock('https://example.com')
+                .post('/test/applications/oauth/interface/token.php', {
+                    client_id: "TestClientID",
+                    client_secret: "TestClientSecret",
+                    grant_type: 'refresh_token',
+                    refresh_token: 'TestRefreshToken'
+                })
+                .reply(200, {
+                    access_token: "TestAccessToken",
+                    expires_in: 3600,
+                    refresh_token: "TestRefreshToken",
+                    token_type: 'query'
+                });
+
+            site.requestToken({
+                refreshToken: 'TestRefreshToken'
+            }, function (err, tokenResponse) {
+                expect(err).to.not.be.ok();
+                expect(tokenResponse.access_token).to.equal('TestAccessToken');
+                expect(tokenResponse.refresh_token).to.equal('TestRefreshToken');
+                expect(tokenResponse.expires_in).to.equal(3600);
+                expect(tokenResponse.token_type).to.equal('query');
+                expect(nockRequest.isDone()).to.equal(true);
+
+                done();
+            });
+        });
     });
 });
