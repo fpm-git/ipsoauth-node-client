@@ -128,7 +128,7 @@ describe("Token", function () {
         });
 
         it("should parse JSON correctly", function () {
-            let t = new Token('{"access_token": "TestAccessToken", "refresh_token": "TestRefreshToken", "expires": 1000 , "token_type": "query"}');
+            let t = new Token('{"access_token": "TestAccessToken", "refresh_token": "TestRefreshToken", "expires": 1000 , "token_type": "query"}', site);
 
             expect(t.access_token).to.equal("TestAccessToken");
             expect(t.refresh_token).to.equal("TestRefreshToken");
@@ -144,7 +144,7 @@ describe("Token", function () {
                 token_type: 'query'
             }, site);
 
-            let t = new Token(old.toString());
+            let t = new Token(old.toString(), site);
 
             expect(t.access_token).to.equal("TestAccessToken");
             expect(t.refresh_token).to.equal("TestRefreshToken");
