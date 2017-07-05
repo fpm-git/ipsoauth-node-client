@@ -51,14 +51,16 @@ describe('Site', function() {
                 site.processAuthorizationResponse({
                     code: "TestCode"
                 }, redirectURI, 'TestState', function (err) {
-                    expect(err).to.be.a(errors.BadResponseError);
+                    expect(err).to.be.a(errors.BadRedirectParameterError);
+                    expect(err.param).to.equal("state");
                     done();
                 });
             });
 
             it("should fail if no code is included in the response", function(done) {
                 site.processAuthorizationResponse({}, redirectURI, function (err) {
-                    expect(err).to.be.a(errors.BadResponseError);
+                    expect(err).to.be.a(errors.BadRedirectParameterError);
+                    expect(err.param).to.equal("code");
                     done();
                 });
             });
@@ -67,7 +69,7 @@ describe('Site', function() {
                 site.processAuthorizationResponse({
                     error: "access_denied"
                 }, redirectURI, function (err) {
-                    expect(err).to.be.a(errors.AuthorizationDeniedError);
+                    expect(err).to.be.an(errors.AuthorizationDeniedError);
                     done();
                 });
             });
@@ -76,7 +78,7 @@ describe('Site', function() {
                 site.processAuthorizationResponse({
                     error: "server_error"
                 }, redirectURI, function (err) {
-                    expect(err).to.be.a(errors.AuthorizationFailedError);
+                    expect(err).to.be.an(errors.AuthorizationFailedError);
                     done();
                 });
             });
