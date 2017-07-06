@@ -16,8 +16,8 @@ describe('Site', function() {
         baseURL: baseURL
     });
 
-    describe("#authorizationURL", function () {
-        let authURL = Url.parse(site.authorizationURL(redirectURI, ["basic_info.read", "email.read"], "TestState"), true);
+    describe("#getAuthorizationURL", function () {
+        let authURL = Url.parse(site.getAuthorizationURL(redirectURI, ["basic_info.read", "email.read"], "TestState"), true);
 
         it("should point to the correct page", function() {
             expect(authURL.protocol).to.equal('https:');
