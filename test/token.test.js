@@ -113,6 +113,69 @@ describe("Token", function () {
                 done();
             });
         });
+
+        it("should call the callback after receiving a new token", function(done) {
+            let startDate = Date.now();
+            let nockRequest = nock('https://example.com')
+                .post('/test/applications/oauth/interface/token.php', {
+                    client_id: "TestClientID",
+                    client_secret: "TestClientSecret",
+                    grant_type: 'refresh_token',
+                    refresh_token: 'TestRefreshToken'
+                })
+                .reply(200, {
+                    access_token: "TestAccessTokenNew",
+                    expires_in: 100,
+                    refresh_token: "TestRefreshTokenNew",
+                    token_type: 'Bearer'
+                });
+
+            let t = new Token({
+                refresh_token: 'TestRefreshToken',
+                expires_in: 3600,
+                token_type: 'query'
+            }, site, function(newTokenObj) {
+                expect(newTokenObj.access_token).to.equal("TestAccessTokenNew");
+                expect(newTokenObj.refresh_token).to.equal("TestRefreshTokenNew");
+                expect(newTokenObj.expires.getTime()).to.be.within(startDate + 100000, Date.now() + 100000);
+                expect(newTokenObj.type).to.equal("Bearer");
+
+                done();
+            });
+
+            t.getAccessToken(function(err, token) {});
+        });
+
+        it("should replace the token change callback when requested", function(done) {
+            let nockRequest = nock('https://example.com')
+                .post('/test/applications/oauth/interface/token.php', {
+                    client_id: "TestClientID",
+                    client_secret: "TestClientSecret",
+                    grant_type: 'refresh_token',
+                    refresh_token: 'TestRefreshToken'
+                })
+                .reply(200, {
+                    access_token: "TestAccessTokenNew",
+                    expires_in: 100,
+                    refresh_token: "TestRefreshTokenNew",
+                    token_type: 'Bearer'
+                });
+
+            let t = new Token({
+                refresh_token: 'TestRefreshToken',
+                expires_in: 3600,
+                token_type: 'query'
+            }, site, function(newTokenObj) {
+                done("Wrong callback called");
+            });
+
+            t.setChangeCallback(function(newTokenObj) {
+                expect(newTokenObj).to.be.ok();
+                done();
+            });
+
+            t.getAccessToken(function(err, token) {});
+        });
     });
 
     describe("serialization and deserialization", function () {
