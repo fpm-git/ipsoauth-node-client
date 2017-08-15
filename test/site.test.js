@@ -57,6 +57,19 @@ describe('Site', function() {
                 });
             });
 
+            it("should fail if the wrong state is passed in through options", function(done) {
+                site.processAuthorizationResponse({
+                    code: 'TestCode',
+                    state: 'TestState'
+                }, redirectURI, {
+                    state: 'WrongState'
+                }, function (err, tokens, api) {
+                    expect(err).to.be.a(errors.BadRedirectParameterError);
+                    expect(err.param).to.equal("state");
+                    done();
+                });
+            });
+
             it("should fail if no code is included in the response", function(done) {
                 site.processAuthorizationResponse({}, redirectURI, function (err) {
                     expect(err).to.be.a(errors.BadRedirectParameterError);
@@ -96,7 +109,8 @@ describe('Site', function() {
                         client_secret: "TestClientSecret",
                         redirect_uri: redirectURI,
                         grant_type: 'authorization_code',
-                        code: 'TestCode'
+                        code: 'TestCode',
+                        include_refresh_token: '1'
                     })
                     .reply(200, {
                         access_token: "TestAccessToken",
@@ -127,7 +141,8 @@ describe('Site', function() {
                         client_secret: "TestClientSecret",
                         redirect_uri: redirectURI,
                         grant_type: 'authorization_code',
-                        code: 'TestCode'
+                        code: 'TestCode',
+                        include_refresh_token: '1'
                     })
                     .reply(200, {
                         access_token: "TestAccessToken",
@@ -177,6 +192,61 @@ describe('Site', function() {
                     code: 'TestCode'
                 }, redirectURI, function (err, tokens, api) {
                     expect(err).to.be.a(errors.BadResponseError);
+
+                    done();
+                });
+            });
+
+            it("should not request a refresh token when none is requested", function(done) {
+                let nockRequest = nock('https://example.com')
+                    .post('/test/applications/oauth/interface/token.php', function(body) {
+                        return body.include_refresh_token === undefined ||
+                            body.include_refresh_token === '0' ||
+                            body.include_refresh_token === 'false';
+                    })
+                    .reply(200, {
+                        access_token: "TestAccessToken",
+                        expires_in: 3600,
+                        token_type: 'query'
+                    });
+
+                site.processAuthorizationResponse({
+                    code: 'TestCode',
+                    state: 'TestState'
+                }, redirectURI, 'TestState', {
+                    includeRefreshToken: false
+                }, function (err, tokens, api) {
+                    expect(err).to.not.be.ok();
+                    expect(tokens).to.be.a(lib.Token);
+                    expect(nockRequest.isDone()).to.equal(true);
+
+                    done();
+                });
+            });
+
+            it("should allow state to be passed in through options", function(done) {
+                let nockRequest = nock('https://example.com')
+                    .post('/test/applications/oauth/interface/token.php', function(body) {
+                        return body.include_refresh_token === undefined ||
+                            body.include_refresh_token === '0' ||
+                            body.include_refresh_token === 'false';
+                    })
+                    .reply(200, {
+                        access_token: "TestAccessToken",
+                        expires_in: 3600,
+                        token_type: 'query'
+                    });
+
+                site.processAuthorizationResponse({
+                    code: 'TestCode',
+                    state: 'TestState'
+                }, redirectURI, {
+                    includeRefreshToken: false,
+                    state: 'TestState'
+                }, function (err, tokens, api) {
+                    expect(err).to.not.be.ok();
+                    expect(tokens).to.be.a(lib.Token);
+                    expect(nockRequest.isDone()).to.equal(true);
 
                     done();
                 });
