@@ -226,4 +226,29 @@ describe("Token", function () {
             expect("" + t).to.equal(JSON.stringify(t));
         });
     });
+
+    describe("revoke", function() {
+        it("should make a revocation request to the server when asked", function(done) {
+            let nockRequest = nock('https://example.com')
+                .post('/test/applications/oauth/interface/revoke.php', {
+                    client_id: "TestClientID",
+                    client_secret: "TestClientSecret",
+                    token: 'TestRefreshToken'
+                })
+                .reply(204);
+
+            let t = new Token({
+                refresh_token: 'TestRefreshToken',
+                expires_in: 3600,
+                token_type: 'query'
+            }, site);
+
+            t.revoke(function(err) {
+                expect(err).to.not.be.ok();
+                expect(nockRequest.isDone()).to.equal(true);
+
+                done();
+            });
+        });
+    });
 });
