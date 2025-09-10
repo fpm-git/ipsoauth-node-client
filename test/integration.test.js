@@ -1,53 +1,35 @@
-const expect = require('expect.js');
-const nock = require('nock');
-
-const lib = require('../index');
+import {expect} from 'chai';
+import fetchMock from 'fetch-mock';
+import {Site} from '../index.js';
 
 describe("ipsoauth-client", function () {
-    it("should create a valid API instance from a successful authorization response", function (done) {
-        let apiResponse = {
-            basic_info: {
-                name: 'TestUser',
-                id: 1001,
-                photo: 'http://example.com/uploads/1001.png',
-                groupName: 'Members',
-                groupId: 3,
-                postCount: 86
-            }
-        };
-        let nockRequest = nock('https://example.com')
-            .post('/test/applications/oauth/interface/token.php', {
-                client_id: "TestClientID",
-                client_secret: "TestClientSecret",
-                grant_type: 'authorization_code',
-                code: 'TestCode'
-            })
-            .reply(200, {
-                access_token: "TestAccessToken",
-                token_type: 'query'
-            })
+  before(() => fetchMock.mockGlobal())
+  afterEach(() => fetchMock.removeRoutes());
 
-            .get('/test/applications/oauth/interface/api.php')
-            .query({'endpoint': '/core/member', 'token': 'TestAccessToken'})
-            .reply(200, apiResponse);
+  it("should create a valid API instance from a successful authorization response", async function () {
+    const apiResponse = {
+      basic_info: {
+        name: 'TestUser', id: 1001, photo: 'http://example.com/uploads/1001.png', groupName: 'Members', groupId: 3, postCount: 86
+      }
+    };
+    fetchMock
+      .postOnce('https://example.com/test/applications/oauth/interface/token.php', {
+        status: 200, body: {
+          access_token: "TestAccessToken", token_type: 'query'
+        }
+      })
+      .getOnce('https://example.com/test/applications/oauth/interface/api.php?endpoint=/core/member&token=TestAccessToken', {
+        status: 200,
+        body: apiResponse
+      });
 
-        let site = new lib.Site({
-            clientID: "TestClientID",
-            clientSecret: "TestClientSecret",
-            baseURL: "https://example.com/test/"
-        });
-        site.processAuthorizationResponse({
-            code: "TestCode"
-        }, "http://localhost/redirect", function (err, token, api) {
-            expect(err).to.not.be.ok();
-
-            api.core.member.get(function (err, info) {
-                expect(err).to.not.be.ok();
-                expect(info).to.eql(apiResponse);
-                expect(nockRequest.isDone()).to.equal(true);
-
-                done();
-            });
-        });
+    const site = new Site({
+      clientID: "TestClientID", clientSecret: "TestClientSecret", baseURL: "https://example.com/test/"
     });
+    const { tokens, api } = await site.processAuthorizationResponse({
+      code: "TestCode"
+    }, "http://localhost/redirect");
+    const info = await api.core.member.get();
+    expect(info).to.eql(apiResponse);
+  });
 });

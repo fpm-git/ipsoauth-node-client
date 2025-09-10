@@ -4,32 +4,36 @@ A NodeJS client library for the OAuth application for Invision Community/Invisio
 ## Usage
 ### Install
 ```
-$ npm install lmg-git/ipsoauth-node-client
+$ npm install fpm-git/ipsoauth-node-client
 ```
 ### Use
 ```javascript
-const IPSApi = require('ipsoauth-client');
+import { Site, Api } from 'ipsoauth-client';
 
 // Construct
-let site = new IPSApi.Site({
+const site = new Site({
     clientID: "YourClientID",
     clientSecret: "YourClientSecret",
     baseURL: "https://example.com/forum/"
 });
 
 // Get the URL that a user should be redirected to to grant access
-let url = site.authorizationURL("http://localhost/process_authorization", ["basic_info.read"], "state");
+const url = site.getAuthorizationURL("http://localhost/process_authorization", ["basic_info.read"], "state");
 
 // Once the user returns to the redirect URI, process the authorization response
-site.processAuthorizationResponse(req.query, "http://localhost/process_authorization", "state", function(err, tokens, api) {
-    // save tokens.toString() as a string in the database for the user, so future requests can be made
-    
-    // Get information about the member
-    api.core.member.get(function(err, response) {
+(async () => {
+    try {
+        const { tokens, api } = await site.processAuthorizationResponse(req.query, "http://localhost/process_authorization", "state");
+        // save tokens.toString() as a string in the database for the user, so future requests can be made
+
+        // Get information about the member
+        const response = await api.core.member.get();
         // Process the response
-    });
-});
+    } catch (err) {
+        // Handle error
+    }
+})();
 
 // In future requests, to access the API, get tokens from the database, then construct the API instance using
-let api = IPSApi.Api(tokens, api);
+const api = new Api(tokens, site);
 ```
